@@ -37,7 +37,7 @@ public final class ReviewManager {
     ///   - minDaysSinceInstall: Minimum days after install before prompting. Defaults to `7`.
     ///   - actionThreshold: Number of interactions required before prompting. Defaults to `20`.
     ///   - coolDownDays: Minimum days between review prompts. Defaults to `30`.
-    public init(
+    public nonisolated init(
         minDaysSinceInstall: Int = 7,
         actionThreshold: Int = 20,
         coolDownDays: Int = 30
@@ -45,10 +45,6 @@ public final class ReviewManager {
         self.minDaysSinceInstall = minDaysSinceInstall
         self.actionThreshold = actionThreshold
         self.cooldownDays = coolDownDays
-
-        if defaults.date(for: ReviewUserDefaultsKey.appInstallDate) == nil {
-            defaults.set(Date.now, for: ReviewUserDefaultsKey.appInstallDate)
-        }
     }
 
     /// Registers a user interaction that may count towards triggering a review prompt.
@@ -59,6 +55,7 @@ public final class ReviewManager {
     /// - Parameter requestReview: The review action provided by SwiftUI's
     ///   `@Environment(\.requestReview)`.
     public func registerInteraction(_ requestReview: RequestReviewAction) {
+        recordInstallDateIfNeeded()
         let newCount = defaults.integer(for: ReviewUserDefaultsKey.reviewCountThreshold) + 1
         defaults.set(newCount, for: ReviewUserDefaultsKey.reviewCountThreshold)
 
@@ -78,6 +75,7 @@ public final class ReviewManager {
     /// - Parameter requestReview: The review action provided by SwiftUI's
     ///   `@Environment(\.requestReview)`.
     public func registerSignificantEvent(_ requestReview: RequestReviewAction) {
+        recordInstallDateIfNeeded()
         guard passesGatingChecks() else { return }
         recordAndRequest(requestReview)
     }
@@ -90,6 +88,7 @@ public final class ReviewManager {
     /// - Parameter requestReview: The review action provided by SwiftUI's
     ///   `@Environment(\.requestReview)`.
     public func registerNewVersionEvent(_ requestReview: RequestReviewAction) {
+        recordInstallDateIfNeeded()
         let currentVersion = Bundle.main.appVersion
         let lastVersion = defaults.string(for: ReviewUserDefaultsKey.lastReviewedVersion)
 
@@ -104,6 +103,13 @@ public final class ReviewManager {
 // MARK: - Private
 
 extension ReviewManager {
+
+    /// Records the install date if it has not already been set.
+    private func recordInstallDateIfNeeded() {
+        if defaults.date(for: ReviewUserDefaultsKey.appInstallDate) == nil {
+            defaults.set(Date.now, for: ReviewUserDefaultsKey.appInstallDate)
+        }
+    }
 
     /// Returns `true` if both the install-age and cooldown checks pass.
     private func passesGatingChecks() -> Bool {
