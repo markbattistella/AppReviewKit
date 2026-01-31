@@ -1,17 +1,17 @@
 <!-- markdownlint-disable MD024 MD033 MD041 -->
 <div align="center">
 
-# AppStoreReviewManager
+# AppReviewKit
 
-![Swift Versions](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fmarkbattistella%2FAppStoreReviewManager%2Fbadge%3Ftype%3Dswift-versions)
+![Swift Versions](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fmarkbattistella%2FAppReviewKit%2Fbadge%3Ftype%3Dswift-versions)
 
-![Platforms](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fmarkbattistella%2FAppStoreReviewManager%2Fbadge%3Ftype%3Dplatforms)
+![Platforms](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fmarkbattistella%2FAppReviewKit%2Fbadge%3Ftype%3Dplatforms)
 
 ![Licence](https://img.shields.io/badge/Licence-MIT-white?labelColor=blue&style=flat)
 
 </div>
 
-`AppStoreReviewManager` is a Swift package that provides a configurable and reusable way to prompt users for App Store reviews. It tracks install date, interaction count, and cooldown periods to determine the right moment to request a review — avoiding prompting too early or too often.
+`AppReviewKit` is a Swift package that provides a configurable and reusable way to prompt users for App Store reviews. It tracks install date, interaction count, and cooldown periods to determine the right moment to request a review — avoiding prompting too early or too often.
 
 ## Features
 
@@ -21,44 +21,63 @@
 - **Install Age Gating:** Prevent prompting users who only recently installed the app.
 - **Cooldown Periods:** Enforce a minimum number of days between review requests.
 - **Isolated Persistence:** All state is stored in a dedicated `UserDefaults` suite to avoid clashes with your app's other settings.
+- **SwiftUI Environment Support:** Inject `ReviewManager` via `@Environment(\.reviewManager)` for clean dependency management.
 
 ## Installation
 
-Add `AppStoreReviewManager` to your Swift project using Swift Package Manager.
+Add `AppReviewKit` to your Swift project using Swift Package Manager.
 
 ```swift
 dependencies: [
-  .package(url: "https://github.com/markbattistella/AppStoreReviewManager", from: "1.0.0")
+  .package(url: "https://github.com/markbattistella/AppReviewKit", from: "2.0.0")
 ]
+```
+
+Then add `AppReviewKit` to your target's dependencies:
+
+```swift
+.target(
+  name: "YourApp",
+  dependencies: ["AppReviewKit"]
+)
 ```
 
 ## Usage
 
 ### Setup
 
-Create a `ReviewManager` instance with your desired configuration. The defaults are sensible starting points:
+`ReviewManager` can be injected into the SwiftUI environment. The defaults are sensible starting points:
 
 ```swift
-let reviewManager = ReviewManager(
-  minDaysSinceInstall: 7,   // wait 7 days after install
-  actionThreshold: 20,      // require 20 interactions
-  coolDownDays: 30           // wait 30 days between prompts
-)
+@main
+struct MyApp: App {
+  var body: some Scene {
+    WindowGroup {
+      ContentView()
+        .environment(\.reviewManager, ReviewManager(
+          minDaysSinceInstall: 7,   // wait 7 days after install
+          actionThreshold: 20,      // require 20 interactions
+          coolDownDays: 30          // wait 30 days between prompts
+        ))
+    }
+  }
+}
 ```
 
-All three methods require the `RequestReviewAction` provided by SwiftUI's `@Environment(\.requestReview)`:
+Then access it from any view along with SwiftUI's `requestReview` action:
 
 ```swift
 struct ContentView: View {
+  @Environment(\.reviewManager) private var reviewManager
   @Environment(\.requestReview) private var requestReview
-
-  let reviewManager = ReviewManager()
 
   var body: some View {
     // ...
   }
 }
 ```
+
+A default `ReviewManager` instance is provided automatically if you don't inject one.
 
 ### Interaction-Based Prompting
 
@@ -92,9 +111,8 @@ Use `registerNewVersionEvent(_:)` to prompt users once after updating to a new a
 
 ```swift
 struct ContentView: View {
+  @Environment(\.reviewManager) private var reviewManager
   @Environment(\.requestReview) private var requestReview
-
-  let reviewManager = ReviewManager()
 
   var body: some View {
     MyMainView()
@@ -124,7 +142,7 @@ This compares the current `CFBundleShortVersionString` against the version store
 
 ## How It Works
 
-On first initialisation, `ReviewManager` records the install date in a dedicated `UserDefaults` suite (`com.markbattistella.packages.appStoreReviewManager`). All review state — interaction count, last request date, and last reviewed version — is stored in this isolated suite to prevent conflicts with your app's other settings.
+On first initialisation, `ReviewManager` records the install date in a dedicated `UserDefaults` suite (`com.markbattistella.packages.appReviewKit`). All review state — interaction count, last request date, and last reviewed version — is stored in this isolated suite via [DefaultsKit](https://github.com/markbattistella/DefaultsKit) to prevent conflicts with your app's other settings.
 
 Every method shares the same gating logic:
 
@@ -139,4 +157,4 @@ Contributions are always welcome! Feel free to submit a pull request or open an 
 
 ## License
 
-`AppStoreReviewManager` is licensed under the MIT License. See the LICENCE file for more details.
+`AppReviewKit` is licensed under the MIT License. See the LICENCE file for more details.

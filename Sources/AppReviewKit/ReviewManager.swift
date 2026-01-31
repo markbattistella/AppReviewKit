@@ -1,5 +1,5 @@
 //
-// Project: AppStoreReviewManager
+// Project: AppReviewKit
 // Author: Mark Battistella
 // Website: https://markbattistella.com
 //
@@ -46,8 +46,8 @@ public final class ReviewManager {
         self.actionThreshold = actionThreshold
         self.cooldownDays = coolDownDays
 
-        if defaults.date(for: ASRUserDefaultsKey.appInstallDate) == nil {
-            defaults.set(Date.now, for: ASRUserDefaultsKey.appInstallDate)
+        if defaults.date(for: ReviewUserDefaultsKey.appInstallDate) == nil {
+            defaults.set(Date.now, for: ReviewUserDefaultsKey.appInstallDate)
         }
     }
 
@@ -59,14 +59,14 @@ public final class ReviewManager {
     /// - Parameter requestReview: The review action provided by SwiftUI's
     ///   `@Environment(\.requestReview)`.
     public func registerInteraction(_ requestReview: RequestReviewAction) {
-        let newCount = defaults.integer(for: ASRUserDefaultsKey.reviewCountThreshold) + 1
-        defaults.set(newCount, for: ASRUserDefaultsKey.reviewCountThreshold)
+        let newCount = defaults.integer(for: ReviewUserDefaultsKey.reviewCountThreshold) + 1
+        defaults.set(newCount, for: ReviewUserDefaultsKey.reviewCountThreshold)
 
         guard newCount >= actionThreshold else { return }
 
         guard passesGatingChecks() else { return }
 
-        defaults.set(0, for: ASRUserDefaultsKey.reviewCountThreshold)
+        defaults.set(0, for: ReviewUserDefaultsKey.reviewCountThreshold)
         recordAndRequest(requestReview)
     }
 
@@ -91,12 +91,12 @@ public final class ReviewManager {
     ///   `@Environment(\.requestReview)`.
     public func registerNewVersionEvent(_ requestReview: RequestReviewAction) {
         let currentVersion = Bundle.main.appVersion
-        let lastVersion = defaults.string(for: ASRUserDefaultsKey.lastReviewedVersion)
+        let lastVersion = defaults.string(for: ReviewUserDefaultsKey.lastReviewedVersion)
 
         guard currentVersion != lastVersion else { return }
         guard passesGatingChecks() else { return }
 
-        defaults.set(currentVersion, for: ASRUserDefaultsKey.lastReviewedVersion)
+        defaults.set(currentVersion, for: ReviewUserDefaultsKey.lastReviewedVersion)
         recordAndRequest(requestReview)
     }
 }
@@ -107,13 +107,13 @@ extension ReviewManager {
 
     /// Returns `true` if both the install-age and cooldown checks pass.
     private func passesGatingChecks() -> Bool {
-        if let installDate = defaults.date(for: ASRUserDefaultsKey.appInstallDate) {
+        if let installDate = defaults.date(for: ReviewUserDefaultsKey.appInstallDate) {
             guard let cutoff = Calendar.autoupdatingCurrent
                 .date(byAdding: .day, value: minDaysSinceInstall, to: installDate),
                   Date.now >= cutoff else { return false }
         }
 
-        if let lastRequest = defaults.date(for: ASRUserDefaultsKey.lastReviewRequestDate) {
+        if let lastRequest = defaults.date(for: ReviewUserDefaultsKey.lastReviewRequestDate) {
             guard let cutoff = Calendar.autoupdatingCurrent
                 .date(byAdding: .day, value: cooldownDays, to: lastRequest),
                   Date.now >= cutoff else { return false }
@@ -124,7 +124,7 @@ extension ReviewManager {
 
     /// Records the review request date and calls the review action.
     private func recordAndRequest(_ requestReview: RequestReviewAction) {
-        defaults.set(Date.now, for: ASRUserDefaultsKey.lastReviewRequestDate)
+        defaults.set(Date.now, for: ReviewUserDefaultsKey.lastReviewRequestDate)
         requestReview()
     }
 }

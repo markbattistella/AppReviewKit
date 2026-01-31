@@ -1,5 +1,5 @@
 //
-// Project: AppStoreReviewManager
+// Project: AppReviewKit
 // Author: Mark Battistella
 // Website: https://markbattistella.com
 //

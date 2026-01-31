@@ -3,7 +3,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "AppStoreReviewManager",
+    name: "AppReviewKit",
     platforms: [
         .iOS(.v17),
         .macOS(.v14),
@@ -13,14 +13,14 @@ let package = Package(
         .watchOS(.v10)
     ],
     products: [
-        .library(name: "AppStoreReviewManager", targets: ["AppStoreReviewManager"])
+        .library(name: "AppReviewKit", targets: ["AppReviewKit"])
     ],
     dependencies: [
         .package(url: "https://github.com/markbattistella/DefaultsKit", from: "26.0.0"),
     ],
     targets: [
         .target(
-            name: "AppStoreReviewManager",
+            name: "AppReviewKit",
             dependencies: ["DefaultsKit"],
         )
     ]

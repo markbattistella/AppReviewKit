@@ -1,5 +1,5 @@
 //
-// Project: AppStoreReviewManager
+// Project: AppReviewKit
 // Author: Mark Battistella
 // Website: https://markbattistella.com
 //
@@ -9,7 +9,7 @@ import Foundation
 
 /// An enumeration representing keys for storing review-related settings in `UserDefaults`.
 /// Each case corresponds to a specific setting that can be stored and retrieved.
-public enum ASRUserDefaultsKey: String, UserDefaultsKeyRepresentable {
+public enum ReviewUserDefaultsKey: String, UserDefaultsKeyRepresentable {
 
     /// The number of user interactions counted towards the review threshold.
     case reviewCountThreshold
@@ -27,6 +27,6 @@ public enum ASRUserDefaultsKey: String, UserDefaultsKeyRepresentable {
 
     /// Default suite name to group all package keys.
     public static var suiteName: String? {
-        "com.markbattistella.packages.appStoreReviewManager"
+        "com.markbattistella.packages.appReviewKit"
     }
 }

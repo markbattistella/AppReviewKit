@@ -1,5 +1,5 @@
 //
-// Project: AppStoreReviewManager
+// Project: AppReviewKit
 // Author: Mark Battistella
 // Website: https://markbattistella.com
 //
@@ -19,7 +19,7 @@ extension UserDefaults {
     /// as extensions or widgets.
     nonisolated(unsafe)
     public static let review: UserDefaults = {
-        guard let userDefaults = UserDefaults(suiteName: ASRUserDefaultsKey.suiteName) else {
+        guard let userDefaults = UserDefaults(suiteName: ReviewUserDefaultsKey.suiteName) else {
             return .standard
         }
         return userDefaults
