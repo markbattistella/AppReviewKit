@@ -1,34 +1,27 @@
-// swift-tools-version: 5.9
+// swift-tools-version: 5.10
 
 import PackageDescription
 
 let package = Package(
     name: "AppStoreReviewManager",
     platforms: [
-        .iOS(.v14),
-        .macOS(.v11),
-        .macCatalyst(.v14),
-        .tvOS(.v14),
+        .iOS(.v17),
+        .macOS(.v14),
+        .macCatalyst(.v17),
+        .tvOS(.v17),
         .visionOS(.v1),
-        .watchOS(.v7)
+        .watchOS(.v10)
     ],
     products: [
-        .library(
-            name: "AppStoreReviewManager",
-            targets: ["AppStoreReviewManager"]
-        )
+        .library(name: "AppStoreReviewManager", targets: ["AppStoreReviewManager"])
     ],
     dependencies: [
-        .package(
-            url: "https://github.com/markbattistella/DefaultsKit",
-            from: "1.0.0"
-        )
+        .package(url: "https://github.com/markbattistella/DefaultsKit", from: "26.0.0"),
     ],
     targets: [
         .target(
             name: "AppStoreReviewManager",
             dependencies: ["DefaultsKit"],
-            exclude: []
         )
     ]
 )

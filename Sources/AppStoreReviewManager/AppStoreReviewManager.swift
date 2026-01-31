@@ -1,78 +1,130 @@
 //
-// Project: EmbeeKit
+// Project: AppStoreReviewManager
 // Author: Mark Battistella
 // Website: https://markbattistella.com
 //
 
+import Foundation
+import SwiftUI
 import StoreKit
 import DefaultsKit
 
-/// Manages the logic of requesting app store reviews.
-final public class AppStoreReviewManager {
+/// Manages when to prompt users for App Store reviews based on usage patterns.
+///
+/// `ReviewManager` tracks install date, user interactions, and cooldown periods to decide when it
+/// is appropriate to show a review request. This helps avoid prompting too soon or too often,
+/// improving user experience and compliance with Apple's guidelines.
+@MainActor
+public final class ReviewManager {
 
-	// MARK: - Properties
+    /// Minimum number of days since installation before a review can be requested.
+    private let minDaysSinceInstall: Int
 
-	/// Minimum number of "worthy actions" to trigger the review request.
-	private var minimumWorthyActionCount: Int
+    /// Number of user interactions required before a review can be considered.
+    private let actionThreshold: Int
 
-	// MARK: - Initializers
+    /// Minimum number of days between review requests.
+    private let cooldownDays: Int
 
-	public init(minimumWorthyActionCount: Int = 20) {
-		self.minimumWorthyActionCount = minimumWorthyActionCount
-	}
+    /// Shared user defaults for persisting review state.
+    private let defaults = UserDefaults.review
 
-	// MARK: - Public Methods
+    /// Creates a new review manager.
+    ///
+    /// On first launch, this initialiser records the install date in user defaults.
+    ///
+    /// - Parameters:
+    ///   - minDaysSinceInstall: Minimum days after install before prompting. Defaults to `7`.
+    ///   - actionThreshold: Number of interactions required before prompting. Defaults to `20`.
+    ///   - coolDownDays: Minimum days between review prompts. Defaults to `30`.
+    public init(
+        minDaysSinceInstall: Int = 7,
+        actionThreshold: Int = 20,
+        coolDownDays: Int = 30
+    ) {
+        self.minDaysSinceInstall = minDaysSinceInstall
+        self.actionThreshold = actionThreshold
+        self.cooldownDays = coolDownDays
 
-	/// Requests an app store review if certain conditions are met.
-	public func requestReviewIfAppropriate() {
+        if defaults.date(for: ASRUserDefaultsKey.appInstallDate) == nil {
+            defaults.set(Date.now, for: ASRUserDefaultsKey.appInstallDate)
+        }
+    }
 
-		// Check if it's appropriate to request a review
-		if shouldRequestReview() {
-			SKStoreReviewController.requestReviewInCurrentContext()
-			resetCounters()
-		} else {
-			incrementCounter()
-		}
-	}
+    /// Registers a user interaction that may count towards triggering a review prompt.
+    ///
+    /// Increments the interaction counter and, once the threshold is reached, checks install age
+    /// and cooldown before requesting a review.
+    ///
+    /// - Parameter requestReview: The review action provided by SwiftUI's
+    ///   `@Environment(\.requestReview)`.
+    public func registerInteraction(_ requestReview: RequestReviewAction) {
+        let newCount = defaults.integer(for: ASRUserDefaultsKey.reviewCountThreshold) + 1
+        defaults.set(newCount, for: ASRUserDefaultsKey.reviewCountThreshold)
 
-	// MARK: - Private Methods
+        guard newCount >= actionThreshold else { return }
 
-	/// Determines whether or not it is appropriate to request an app review.
-	private func shouldRequestReview() -> Bool {
-		let currentCount = getCurrentWorthyActionCount()
-		guard currentCount >= minimumWorthyActionCount else { return false }
+        guard passesGatingChecks() else { return }
 
-		let currentVersion = Bundle.main.appVersion
-		let lastVersion = getLastReviewRequestAppVersion()
+        defaults.set(0, for: ASRUserDefaultsKey.reviewCountThreshold)
+        recordAndRequest(requestReview)
+    }
 
-		return lastVersion != currentVersion
-	}
+    /// Triggers a review prompt after a significant user event, bypassing the action counter.
+    ///
+    /// Use this for meaningful moments (e.g. completing a project, exporting a file) where the
+    /// action count threshold doesn't apply, but install age and cooldown are still respected.
+    ///
+    /// - Parameter requestReview: The review action provided by SwiftUI's
+    ///   `@Environment(\.requestReview)`.
+    public func registerSignificantEvent(_ requestReview: RequestReviewAction) {
+        guard passesGatingChecks() else { return }
+        recordAndRequest(requestReview)
+    }
 
-	/// Retrieves the current count of review-worthy actions from UserDefaults.
-	private func getCurrentWorthyActionCount() -> Int {
-		return UserDefaults.standard.integer(
-			for: UserDefaultKeys.currentReviewWorthyActionCount)
-	}
+    /// Triggers a review prompt if the app has been updated to a new version since the last prompt.
+    ///
+    /// Checks whether the current bundle version differs from the version stored at the time of
+    /// the last review request. Install age and cooldown are still respected.
+    ///
+    /// - Parameter requestReview: The review action provided by SwiftUI's
+    ///   `@Environment(\.requestReview)`.
+    public func registerNewVersionEvent(_ requestReview: RequestReviewAction) {
+        let currentVersion = Bundle.main.appVersion
+        let lastVersion = defaults.string(for: ASRUserDefaultsKey.lastReviewedVersion)
 
-	/// Increments the counter for review-worthy actions.
-	private func incrementCounter() {
-		var count = getCurrentWorthyActionCount()
-		count += 1
-		UserDefaults.standard.set(count, 
-								  for: UserDefaultKeys.currentReviewWorthyActionCount)
-	}
+        guard currentVersion != lastVersion else { return }
+        guard passesGatingChecks() else { return }
 
-	/// Resets the counters and sets the current app version as the last version for 
-    /// which a review was requested.
-	private func resetCounters() {
-		UserDefaults.standard.set(0, for: UserDefaultKeys.currentReviewWorthyActionCount)
-		UserDefaults.standard.set(Bundle.main.appVersion,
-								  for: UserDefaultKeys.lastReviewRequestAppVersion)
-	}
+        defaults.set(currentVersion, for: ASRUserDefaultsKey.lastReviewedVersion)
+        recordAndRequest(requestReview)
+    }
+}
 
-	/// Retrieves the last app version for which a review was requested from UserDefaults.
-	private func getLastReviewRequestAppVersion() -> String? {
-		return UserDefaults.standard.string(
-			for: UserDefaultKeys.lastReviewRequestAppVersion)
-	}
+// MARK: - Private
+
+extension ReviewManager {
+
+    /// Returns `true` if both the install-age and cooldown checks pass.
+    private func passesGatingChecks() -> Bool {
+        if let installDate = defaults.date(for: ASRUserDefaultsKey.appInstallDate) {
+            guard let cutoff = Calendar.autoupdatingCurrent
+                .date(byAdding: .day, value: minDaysSinceInstall, to: installDate),
+                  Date.now >= cutoff else { return false }
+        }
+
+        if let lastRequest = defaults.date(for: ASRUserDefaultsKey.lastReviewRequestDate) {
+            guard let cutoff = Calendar.autoupdatingCurrent
+                .date(byAdding: .day, value: cooldownDays, to: lastRequest),
+                  Date.now >= cutoff else { return false }
+        }
+
+        return true
+    }
+
+    /// Records the review request date and calls the review action.
+    private func recordAndRequest(_ requestReview: RequestReviewAction) {
+        defaults.set(Date.now, for: ASRUserDefaultsKey.lastReviewRequestDate)
+        requestReview()
+    }
 }
