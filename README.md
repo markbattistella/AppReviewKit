@@ -29,7 +29,7 @@ Add `AppReviewKit` to your Swift project using Swift Package Manager.
 
 ```swift
 dependencies: [
-  .package(url: "https://github.com/markbattistella/AppReviewKit", from: "2.0.0")
+  .package(url: "https://github.com/markbattistella/AppReviewKit", from: "26.0.0")
 ]
 ```
 
@@ -41,6 +41,16 @@ Then add `AppReviewKit` to your target's dependencies:
   dependencies: ["AppReviewKit"]
 )
 ```
+
+## Requirements
+
+- Swift 6.0+
+- iOS 17+
+- macOS 14+
+- Mac Catalyst 17+
+- tvOS 17+
+- visionOS 1+
+- watchOS 10+
 
 ## Usage
 
@@ -78,6 +88,8 @@ struct ContentView: View {
 ```
 
 A default `ReviewManager` instance is provided automatically if you don't inject one.
+
+On tvOS and watchOS, SwiftUI's StoreKit `requestReview` action is unavailable. For shared code on those platforms, pass your own `@MainActor () -> Void` review callback.
 
 ### Interaction-Based Prompting
 
@@ -142,7 +154,9 @@ This compares the current `CFBundleShortVersionString` against the version store
 
 ## How It Works
 
-On first initialisation, `ReviewManager` records the install date in a dedicated `UserDefaults` suite (`com.markbattistella.packages.appReviewKit`). All review state — interaction count, last request date, and last reviewed version — is stored in this isolated suite via [DefaultsKit](https://github.com/markbattistella/DefaultsKit) to prevent conflicts with your app's other settings.
+When `ReviewManager` is first initialised, it records the install date in a dedicated `UserDefaults` suite (`com.markbattistella.packages.appReviewKit`) if that value does not already exist.
+
+All review state — interaction count, last request date, and last reviewed version — is stored in this isolated suite via [DefaultsKit](https://github.com/markbattistella/DefaultsKit) to prevent conflicts with your app's other settings.
 
 Every method shares the same gating logic:
 
@@ -157,4 +171,4 @@ Contributions are always welcome! Feel free to submit a pull request or open an 
 
 ## License
 
-`AppReviewKit` is licensed under the MIT License. See the LICENCE file for more details.
+`AppReviewKit` is licensed under the MIT License. See the LICENSE file for more details.

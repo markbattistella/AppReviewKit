@@ -11,22 +11,22 @@ import Foundation
 /// Each case corresponds to a specific setting that can be stored and retrieved.
 public enum ReviewUserDefaultsKey: String, UserDefaultsKeyRepresentable {
 
-    /// The number of user interactions counted towards the review threshold.
-    case reviewCountThreshold
+  /// The number of user interactions counted towards the review threshold.
+  case reviewCountThreshold
 
-    /// The app installation date.
-    ///
-    /// - Important: This key is not persistent across app reinstalls.
-    case appInstallDate
+  /// The app installation date.
+  ///
+  /// - Important: This key is not persistent across app reinstalls.
+  case appInstallDate
 
-    /// The last date a review was requested.
-    case lastReviewRequestDate
+  /// The last date a review was requested.
+  case lastReviewRequestDate
 
-    /// The app version at the time of the last review request.
-    case lastReviewedVersion
+  /// The app version at the time of the last review request.
+  case lastReviewedVersion
 
-    /// Default suite name to group all package keys.
-    public static var suiteName: String? {
-        "com.markbattistella.packages.appReviewKit"
-    }
+  /// Default suite name used to group all review state.
+  public static var suiteName: String? {
+    "com.markbattistella.packages.appReviewKit"
+  }
 }
